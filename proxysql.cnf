@@ -1,0 +1,57 @@
+datadir="/var/lib/proxysql"
+
+admin_variables=
+{
+    admin_credentials="proxysql-admin:admin"
+    mysql_ifaces="0.0.0.0:6032"
+    refresh_interval=2000
+    web_enabled=true
+    web_port=6080
+    stats_credentials="stats:admin"
+}
+
+mysql_variables=
+{
+    threads=4
+    max_connections=2048
+    have_compress=true
+    interfaces="0.0.0.0:6033"
+    default_schema="proxysql_test"
+    server_version="5.7.27"
+    monitor_enabled=false
+    commands_stats=true
+    sessions_sort=true
+    multiplexing=true
+    # this improves the ability to share connections that are doing inserts with the tradeoff 
+    # that if you want to retrieve the LAST_INSERT_ID, you must do it directly in the next query. 
+    auto_increment_delay_multiplex=1
+}
+
+mysql_query_rules =
+(
+        {
+                rule_id=100
+                active=1
+                # This digest represents the query "SELECT @@session.auto_increment_increment AS auto_increment_increment, @@character_set_client AS character_set_client, @@character_set_connection AS character_set_connection, @@character_set_results AS character_set_results, @@character_set_server AS character_set_server, @@collation_server AS collation_server, @@collation_connection AS collation_connection, @@init_connect AS init_connect, @@interactive_timeout AS interactive_timeout, @@license AS license, @@lower_case_table_names AS lower_case_table_names, @@max_allowed_packet AS max_allowed_packet, @@net_write_timeout AS net_write_timeout, @@performance_schema AS performance_schema, @@query_cache_size AS query_cache_size, @@query_cache_type AS query_cache_type, @@sql_mode AS sql_mode, @@system_time_zone AS system_time_zone, @@time_zone AS time_zone, @@transaction_isolation AS transaction_isolation, @@wait_timeout AS wait_timeout".
+                # For some reason I can't get match_pattern to work for this properly.
+                digest="0x928841C8AEDD64F9" 
+                multiplex=2
+        },
+        {
+                # This rule doesn't work
+                rule_id=101
+                active=0 # Switch this to active and switch off the rule 100 to see the issue
+                match_pattern="^.*SELECT @@.*"
+                multiplex=2
+        }
+)
+
+mysql_servers =
+(
+    { address="mysql" , port=3306 , hostgroup=10, max_connections=5 },
+)
+
+mysql_users =
+(
+    { username = "root", password = "root", default_hostgroup = 10, active = 1 },
+)
